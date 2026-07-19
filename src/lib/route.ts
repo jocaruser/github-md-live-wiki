@@ -54,6 +54,12 @@ export function formatRoute(route: Route): string {
   return `#${parts.join('&')}`
 }
 
+/** Trims whitespace and strips wrapping slashes, so a hand-typed `/specs/`
+ *  in a shared link resolves the same as `specs`. */
+function tidy(value: string | undefined): string {
+  return (value ?? '').trim().replace(/^\/+|\/+$/g, '')
+}
+
 export function parseRoute(hash: string): Route {
   const raw = hash.startsWith('#') ? hash.slice(1) : hash
   const params = new Map<string, string>()
@@ -64,12 +70,11 @@ export function parseRoute(hash: string): Route {
     const value = eq === -1 ? '' : pair.slice(eq + 1)
     if (!params.has(key)) params.set(key, safeDecode(value))
   }
-  const repo = params.get('r')
   return {
-    repo: repo || undefined,
-    path: params.get('p') ?? '',
-    ref: params.get('v') || undefined,
-    page: params.get('f') ?? '',
-    anchor: params.get('a') || undefined,
+    repo: tidy(params.get('r')) || undefined,
+    path: tidy(params.get('p')),
+    ref: (params.get('v') ?? '').trim() || undefined,
+    page: tidy(params.get('f')),
+    anchor: params.get('a')?.trim() || undefined,
   }
 }

@@ -81,6 +81,11 @@ test('serves a deep link to a pinned page directly', async ({ page }) => {
   await expect(page.getByText('Release intro body.')).toBeVisible()
 })
 
+test('tolerates a hand-typed leading slash in the deep-linked path', async ({ page }) => {
+  await page.goto('/#r=e2e-org/e2e-repo&p=/specs')
+  await expect(page.getByRole('heading', { name: 'E2E Specs', level: 1 })).toBeVisible()
+})
+
 test('closes back to the form and lists the repository as recent', async ({ page }) => {
   await openRepo(page)
   await page.getByRole('button', { name: 'Close wiki' }).click()

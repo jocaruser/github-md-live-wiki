@@ -73,6 +73,15 @@ describe('parseRoute', () => {
     expect(parseRoute('#r=o/r&f=a%2&x&junk=1')).toMatchObject({ repo: 'o/r', page: 'a%2' })
   })
 
+  it('normalizes a hand-typed leading/trailing slash and whitespace in the path', () => {
+    expect(parseRoute('#r=o/r&p=/specs/&f=/guide/intro.md')).toMatchObject({
+      repo: 'o/r',
+      path: 'specs',
+      page: 'guide/intro.md',
+    })
+    expect(parseRoute('#r=%20o/r%20&p=%20docs%20').repo).toBe('o/r')
+  })
+
   it('ignores a repeated key, keeping the first', () => {
     expect(parseRoute('#r=first/one&r=second/two').repo).toBe('first/one')
   })

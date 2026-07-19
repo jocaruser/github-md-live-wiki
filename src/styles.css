@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Minimal syntax-highlight palette for highlight.js output, both themes. */
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-meta {
+  color: #7c3aed;
+}
+.hljs-string,
+.hljs-attr,
+.hljs-selector-attr {
+  color: #16a34a;
+}
+.hljs-number,
+.hljs-literal {
+  color: #ea580c;
+}
+.hljs-comment {
+  color: #94a3b8;
+  font-style: italic;
+}
+.hljs-title,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class {
+  color: #2563eb;
+}
+.dark .hljs-keyword,
+.dark .hljs-selector-tag,
+.dark .hljs-meta {
+  color: #c4b5fd;
+}
+.dark .hljs-string,
+.dark .hljs-attr,
+.dark .hljs-selector-attr {
+  color: #86efac;
+}
+.dark .hljs-number,
+.dark .hljs-literal {
+  color: #fdba74;
+}
+.dark .hljs-title,
+.dark .hljs-name,
+.dark .hljs-selector-id,
+.dark .hljs-selector-class {
+  color: #93c5fd;
+}
+
+/* Task-list checkboxes render inline with their text. */
+.prose li.task-list-item {
+  list-style: none;
+  margin-left: -1.25rem;
+}
+.prose li.task-list-item input {
+  margin-right: 0.4rem;
+}

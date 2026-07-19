@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "_notice": "This file is maintained by Aircury AI Framework. Do not edit it directly. Add project-specific rules in FRAMEWORK.local.md.",
+  "capabilities": [
+    "open-spec",
+    "custom-architecture",
+    "decision-records",
+    "testing",
+    "code-style",
+    "frontend",
+    "resilience",
+    "language"
+  ],
+  "language": {
+    "britishEnglish": true
+  }
+}

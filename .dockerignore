@@ -1,0 +1,14 @@
+.git
+.github
+node_modules
+dist
+dist-e2e
+coverage
+test-results
+playwright-report
+*.tsbuildinfo
+.pnpm-store
+*.log
+Makefile
+docker-compose.yml
+README.md

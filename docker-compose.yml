@@ -1,0 +1,35 @@
+services:
+  app:
+    image: github-md-live-wiki-app
+    build:
+      context: .
+      target: base
+    volumes:
+      - .:/app
+    ports:
+      - "5176:5176"
+    working_dir: /app
+    environment:
+      - NODE_ENV=development
+    command: tail -f /dev/null
+    networks:
+      github-md-live-wiki-network:
+        aliases:
+          - web
+
+  playwright:
+    image: github-md-live-wiki-playwright
+    build:
+      context: .
+      dockerfile: Dockerfile.playwright
+    volumes:
+      - .:/app
+    working_dir: /app
+    environment:
+      - NODE_ENV=development
+    networks:
+      - github-md-live-wiki-network
+
+networks:
+  github-md-live-wiki-network:
+    driver: bridge

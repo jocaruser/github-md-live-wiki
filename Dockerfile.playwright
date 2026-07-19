@@ -1,0 +1,8 @@
+FROM mcr.microsoft.com/playwright:v1.61.1-jammy
+
+WORKDIR /app
+
+# Pin pnpm to v9 to avoid breaking changes in v10 regarding build scripts
+RUN npm install -g pnpm@9.15.0
+
+CMD ["bash"]

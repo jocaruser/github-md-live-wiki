@@ -1,0 +1,22 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build output
+dist
+dist-e2e
+*.tsbuildinfo
+
+# Test artifacts
+test-results
+playwright-report
+coverage
+
+# IDE & OS
+.idea
+.vscode
+*.swp
+.DS_Store
+
+# Logs
+*.log

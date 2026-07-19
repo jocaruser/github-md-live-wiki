@@ -1,0 +1,63 @@
+name: Deploy to GitHub Pages
+
+# Hosts THIS repository's own wiki instance, configured for illo3d's specs.
+# Content never requires a deploy (the shell fetches it from GitHub at view
+# time); this workflow only redeploys the shell when the engine changes.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enable and configure Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install pnpm
+        run: npm install -g pnpm@9.15.0
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build the shell for the hosted instance
+        run: pnpm build
+        env:
+          VITE_CONTENT_REPO: jocaruser/illo3d
+          VITE_SITE_TITLE: illo3d specs
+          VITE_APP_URL: https://jocaruser.github.io/illo3d/
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
+        id: deployment

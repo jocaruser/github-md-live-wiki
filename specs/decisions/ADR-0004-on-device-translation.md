@@ -5,7 +5,7 @@
 
 ## Context
 
-Content repositories author their specs in one language (English for illo3d),
+A repository authors its content in one language,
 but readers should be able to read the wiki in their own.
 Server-side translation would contradict ADR-0001's no-server architecture,
 and translation services need keys, quotas and someone to pay for them.

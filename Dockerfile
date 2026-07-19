@@ -21,19 +21,18 @@ RUN CI=true pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm build
 
-# runtime: the published image. One image serves any content repository:
-# the entrypoint writes /site/config.js from CONTENT_REPO / CONTENT_PATH /
-# SITE_TITLE / APP_URL / DEFAULT_REF at start, in both modes:
-#   serve  — static server on :5176 (mount a directory at /content for local mode)
-#   export — copies the configured site into a directory mounted at /out
+# runtime: the published image. The app is fully client-side (content is
+# fetched from GitHub in the browser), so the container just serves the static
+# bundle, in two modes:
+#   serve  — static server on :5176
+#   export — copies the site into a directory mounted at /out
 FROM node:25-alpine AS runtime
 
 COPY --from=build /app/dist /site
 COPY docker/server.mjs /app/server.mjs
 COPY docker/entrypoint.sh /app/entrypoint.sh
-# The entrypoint rewrites /site/config.js from env at start; nothing else in
-# the image needs write access, and serving runs as the unprivileged user.
-RUN chmod +x /app/entrypoint.sh && chown -R node:node /site
+# Serving is read-only and runs as the unprivileged user.
+RUN chmod +x /app/entrypoint.sh
 USER node
 
 ENV PORT=5176

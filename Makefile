@@ -95,7 +95,7 @@ test: ## Vitest unit tests with 100% coverage thresholds
 e2e-test: ## Playwright e2e suite against a production build (preview on :5177)
 	docker compose up -d app
 	docker compose exec app sh -c 'kill $$(cat /tmp/github-md-live-wiki-e2e-$(E2E_PORT).pid 2>/dev/null) 2>/dev/null; rm -f /tmp/github-md-live-wiki-e2e-$(E2E_PORT).pid /tmp/github-md-live-wiki-e2e-$(E2E_PORT).log; true'
-	docker compose exec -T app sh -c 'VITE_CONTENT_REPO=e2e-org/e2e-repo VITE_SITE_TITLE="e2e specs" pnpm exec vite build --outDir dist-e2e --logLevel warn'
+	docker compose exec -T app sh -c 'pnpm exec vite build --outDir dist-e2e --logLevel warn'
 	docker compose exec -d -T app sh -c 'nohup pnpm exec vite preview --strictPort --port $(E2E_PORT) --host 0.0.0.0 --outDir dist-e2e >>/tmp/github-md-live-wiki-e2e-$(E2E_PORT).log 2>&1 & echo $$! > /tmp/github-md-live-wiki-e2e-$(E2E_PORT).pid'
 	@n=0; until docker compose exec app wget -q -O- http://127.0.0.1:$(E2E_PORT)/ >/dev/null 2>&1; do \
 		n=$$((n+1)); \
@@ -109,12 +109,12 @@ e2e-test: ## Playwright e2e suite against a production build (preview on :5177)
 image: ## Build the production Docker image (IMAGE=<tag>)
 	docker build -t $(IMAGE) .
 
-image-serve: image ## Run the production image against a content repo (CONTENT_REPO=<owner/name>)
-	docker run --rm -p 5176:5176 -e CONTENT_REPO=$(CONTENT_REPO) $(IMAGE)
+image-serve: image ## Run the production image on :5176
+	docker run --rm -p 5176:5176 $(IMAGE)
 
-image-export: image ## Export the configured site to ./dist-export (CONTENT_REPO=<owner/name>)
+image-export: image ## Export the static site to ./dist-export
 	mkdir -p dist-export
-	docker run --rm -e CONTENT_REPO=$(CONTENT_REPO) -v $(PWD)/dist-export:/out $(IMAGE) export
+	docker run --rm -v $(PWD)/dist-export:/out $(IMAGE) export
 
 # ============ ESCAPE HATCH ============
 bash-exec: ## Run a one-off command in the app container (CMD="...")

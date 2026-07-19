@@ -1,5 +1,4 @@
 import { useState, type FormEvent } from 'react'
-import { LOCAL_REF } from '../config'
 import type { RefInfo } from '../lib/github'
 
 interface RefSelectorProps {
@@ -7,7 +6,6 @@ interface RefSelectorProps {
   defaultRef: string
   tags: RefInfo[]
   branches: RefInfo[]
-  localAvailable: boolean
   onSelect: (ref: string) => void
 }
 
@@ -15,23 +13,11 @@ function shorten(ref: string): string {
   return /^[0-9a-f]{12,40}$/i.test(ref) ? ref.slice(0, 12) : ref
 }
 
-export function RefSelector({
-  current,
-  defaultRef,
-  tags,
-  branches,
-  localAvailable,
-  onSelect,
-}: RefSelectorProps) {
+export function RefSelector({ current, defaultRef, tags, branches, onSelect }: RefSelectorProps) {
   const [open, setOpen] = useState(false)
   const [sha, setSha] = useState('')
 
-  const label =
-    current === LOCAL_REF
-      ? 'local'
-      : current === defaultRef
-        ? `latest (${defaultRef})`
-        : shorten(current)
+  const label = current === defaultRef ? `latest (${defaultRef})` : shorten(current)
 
   const pick = (ref: string) => {
     setOpen(false)
@@ -73,11 +59,6 @@ export function RefSelector({
             className="fixed inset-0 z-30 cursor-default"
           />
           <div className="absolute right-0 z-40 mt-1 max-h-96 w-64 overflow-y-auto rounded-md border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-600 dark:bg-slate-800">
-            {localAvailable && (
-              <button type="button" onClick={() => pick(LOCAL_REF)} className={itemClass(current === LOCAL_REF)}>
-                local (mounted directory)
-              </button>
-            )}
             <button type="button" onClick={() => pick(defaultRef)} className={itemClass(current === defaultRef)}>
               latest ({defaultRef})
             </button>

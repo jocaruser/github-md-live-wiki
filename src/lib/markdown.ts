@@ -30,12 +30,12 @@ hljs.registerLanguage('yaml', yaml)
 
 export interface RenderContext {
   repo: string
+  /** concrete ref for raw/blob URLs (the resolved version being viewed) */
   ref: string
+  /** directory inside the repo holding the pages; '' means the repo root */
   contentPath: string
-  /** true when rendering the mounted local content directory */
-  local: boolean
-  /** branch used for repository links when the ref is the local pseudo-ref */
-  defaultRef: string
+  /** URL version to preserve in page links; undefined keeps them on "latest" */
+  routeRef?: string
 }
 
 export function ghSlug(text: string): string {
@@ -70,11 +70,15 @@ function splitAnchor(href: string): { file: string; anchor?: string } {
   return { file: safeDecode(rawFile), anchor: rawAnchor ? safeDecode(rawAnchor) : undefined }
 }
 
+/** Joins non-empty path segments (an empty content path means the repo root). */
+function joinSegments(...parts: string[]): string {
+  return parts.filter(Boolean).join('/')
+}
+
 /**
  * Maps a markdown link target to what it must be on the published wiki:
  * - links between pages become hash routes at the current ref
  * - non-md assets inside the content tree load from raw.githubusercontent.com
- *   (or the local content server)
  * - links escaping the content tree but staying inside the repository open the
  *   file on GitHub at the matching ref
  * - external links, in-page anchors and links escaping the repository are left
@@ -89,27 +93,29 @@ export function rewriteTarget(
   if (/^[a-z][a-z0-9+.-]*:/i.test(href) || href.startsWith('//') || href.startsWith('#')) {
     return null
   }
-  const repoRef = encodeRefForUrl(ctx.local ? ctx.defaultRef : ctx.ref)
+  const ref = encodeRefForUrl(ctx.ref)
   if (href.startsWith('/')) {
-    if (!ctx.repo) return null
-    return `https://github.com/${ctx.repo}/blob/${repoRef}${encodeUrlPath(safeDecode(href))}`
+    return `https://github.com/${ctx.repo}/blob/${ref}${encodeUrlPath(safeDecode(href))}`
   }
   const { file, anchor: linkAnchor } = splitAnchor(href)
   if (!file) return null
   const resolved = join(dirname(pagePath), file)
   if (!escapesRoot(resolved)) {
     if (!isImage && resolved.endsWith('.md')) {
-      return formatRoute({ ref: ctx.ref, path: resolved, anchor: linkAnchor })
+      return formatRoute({
+        repo: ctx.repo,
+        path: ctx.contentPath,
+        ref: ctx.routeRef,
+        page: resolved,
+        anchor: linkAnchor,
+      })
     }
-    return ctx.local
-      ? `./__local/file/${encodeUrlPath(resolved)}`
-      : `https://raw.githubusercontent.com/${ctx.repo}/${encodeRefForUrl(ctx.ref)}/${encodeUrlPath(ctx.contentPath)}/${encodeUrlPath(resolved)}`
+    return `https://raw.githubusercontent.com/${ctx.repo}/${ref}/${joinSegments(encodeUrlPath(ctx.contentPath), encodeUrlPath(resolved))}`
   }
-  if (!ctx.repo) return null
   const repoPath = join(ctx.contentPath, dirname(pagePath), file)
   if (!escapesRoot(repoPath)) {
     const suffix = linkAnchor ? `#${encodeURIComponent(linkAnchor)}` : ''
-    return `https://github.com/${ctx.repo}/blob/${repoRef}/${encodeUrlPath(repoPath)}${suffix}`
+    return `https://github.com/${ctx.repo}/blob/${ref}/${encodeUrlPath(repoPath)}${suffix}`
   }
   return null
 }

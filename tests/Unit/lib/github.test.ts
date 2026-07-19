@@ -2,9 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   encodeRefForUrl,
   encodeUrlPath,
+  fetchDefaultBranch,
   fetchFile,
-  fetchLocalFile,
-  fetchLocalPaths,
   fetchSpecPaths,
   listBranches,
   listTags,
@@ -56,6 +55,25 @@ async function kindOf(promise: Promise<unknown>): Promise<string> {
 
 afterEach(() => {
   vi.unstubAllGlobals()
+})
+
+describe('fetchDefaultBranch', () => {
+  it('returns the repository default branch', async () => {
+    stubFetch(response(200, { default_branch: 'trunk' }))
+    expect(await fetchDefaultBranch('o/r')).toBe('trunk')
+  })
+
+  it('caches per session', async () => {
+    const mock = stubFetch(response(200, { default_branch: 'main' }))
+    await fetchDefaultBranch('o/r')
+    await fetchDefaultBranch('o/r')
+    expect(mock).toHaveBeenCalledTimes(1)
+  })
+
+  it('maps a missing repository to not-found', async () => {
+    stubFetch(response(404, {}))
+    expect(await kindOf(fetchDefaultBranch('o/missing'))).toBe('not-found')
+  })
 })
 
 describe('listTags / listBranches', () => {
@@ -117,6 +135,25 @@ describe('fetchSpecPaths', () => {
       })
     )
     expect(await fetchSpecPaths('o/r', 'main', 'specs')).toEqual(['a.md', 'b.md'])
+  })
+
+  it('lists the whole repository when the content path is empty', async () => {
+    stubFetch(
+      response(200, {
+        tree: [
+          { path: 'README.md', type: 'blob' },
+          { path: 'docs/a.md', type: 'blob' },
+          { path: 'img.png', type: 'blob' },
+        ],
+      })
+    )
+    expect(await fetchSpecPaths('o/r', 'main', '')).toEqual(['README.md', 'docs/a.md'])
+  })
+
+  it('reports emptiness differently for root vs a subdirectory', async () => {
+    stubFetch(response(200, { tree: [] }))
+    const rootError = (await fetchSpecPaths('o/r', 'main', '').catch((e) => e)) as WikiError
+    expect(rootError.message).toContain('in the repository')
   })
 
   it('encodes the ref in the tree request', async () => {
@@ -208,6 +245,14 @@ describe('fetchFile', () => {
     )
   })
 
+  it('omits the content path segment when it is empty (repo root)', async () => {
+    const mock = stubFetch(response(200, '# root'))
+    await fetchFile('o/r', 'main', '', 'README.md')
+    expect(String(mock.mock.calls[0][0])).toBe(
+      'https://raw.githubusercontent.com/o/r/main/README.md'
+    )
+  })
+
   it('maps 404 to not-found', async () => {
     stubFetch(response(404, ''))
     expect(await kindOf(fetchFile('o/r', 'main', 'specs', 'a.md'))).toBe('not-found')
@@ -221,38 +266,5 @@ describe('fetchFile', () => {
   it('maps fetch failures to network errors', async () => {
     stubFetch(new Error('offline'))
     expect(await kindOf(fetchFile('o/r', 'main', 'specs', 'a.md'))).toBe('network')
-  })
-})
-
-describe('local mode', () => {
-  it('reads and sorts the manifest', async () => {
-    stubFetch(response(200, { paths: ['b.md', 'a.md'] }))
-    expect(await fetchLocalPaths()).toEqual(['a.md', 'b.md'])
-  })
-
-  it('throws empty for a contentless manifest', async () => {
-    stubFetch(response(200, { paths: [] }))
-    expect(await kindOf(fetchLocalPaths())).toBe('empty')
-  })
-
-  it('throws network when the manifest endpoint fails', async () => {
-    stubFetch(response(500, {}))
-    expect(await kindOf(fetchLocalPaths())).toBe('network')
-  })
-
-  it('reads local files', async () => {
-    const mock = stubFetch(response(200, '# local'))
-    expect(await fetchLocalFile('a b.md')).toBe('# local')
-    expect(String(mock.mock.calls[0][0])).toBe('./__local/file/a%20b.md')
-  })
-
-  it('maps missing local files to not-found', async () => {
-    stubFetch(response(404, ''))
-    expect(await kindOf(fetchLocalFile('a.md'))).toBe('not-found')
-  })
-
-  it('maps local server errors to network', async () => {
-    stubFetch(response(500, ''))
-    expect(await kindOf(fetchLocalFile('a.md'))).toBe('network')
   })
 })

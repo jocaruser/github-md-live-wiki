@@ -9,31 +9,25 @@ const branches = [
   { name: 'feat/x', sha: 'b2' },
 ]
 
-function renderSelector(current: string, localAvailable = false, onSelect = vi.fn()) {
+function renderSelector(current: string, onSelect = vi.fn()) {
   render(
     <RefSelector
       current={current}
       defaultRef="main"
       tags={tags}
       branches={branches}
-      localAvailable={localAvailable}
       onSelect={onSelect}
     />
   )
   return onSelect
 }
 
-const openMenu = () => userEvent.click(screen.getByRole('button', { name: /latest|local|▾|./ }))
+const openMenu = () => userEvent.click(screen.getByRole('button', { name: /latest|▾|./ }))
 
 describe('RefSelector', () => {
   it('labels the default ref as latest', () => {
     renderSelector('main')
     expect(screen.getByRole('button', { name: /latest \(main\)/ })).toBeInTheDocument()
-  })
-
-  it('labels the local pseudo-ref', () => {
-    renderSelector('local', true)
-    expect(screen.getByRole('button', { name: /local/ })).toBeInTheDocument()
   })
 
   it('shortens long commit ids', () => {
@@ -64,19 +58,6 @@ describe('RefSelector', () => {
     expect(onSelect).toHaveBeenCalledWith('main')
   })
 
-  it('offers the local entry only when a content dir is mounted', async () => {
-    const onSelect = renderSelector('main', true)
-    await openMenu()
-    await userEvent.click(screen.getByRole('button', { name: 'local (mounted directory)' }))
-    expect(onSelect).toHaveBeenCalledWith('local')
-  })
-
-  it('hides the local entry otherwise', async () => {
-    renderSelector('main', false)
-    await openMenu()
-    expect(screen.queryByRole('button', { name: /local \(mounted/ })).not.toBeInTheDocument()
-  })
-
   it('submits a trimmed commit id', async () => {
     const onSelect = renderSelector('main')
     await openMenu()
@@ -101,9 +82,7 @@ describe('RefSelector', () => {
   })
 
   it('shows placeholders when there are no refs', async () => {
-    render(
-      <RefSelector current="main" defaultRef="main" tags={[]} branches={[]} localAvailable={false} onSelect={vi.fn()} />
-    )
+    render(<RefSelector current="main" defaultRef="main" tags={[]} branches={[]} onSelect={vi.fn()} />)
     await openMenu()
     expect(screen.getByText('No releases yet')).toBeInTheDocument()
     expect(screen.getByText('No branches found')).toBeInTheDocument()

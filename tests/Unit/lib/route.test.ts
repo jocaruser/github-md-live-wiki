@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatRoute, hashOf, parseRoute, safeDecode } from '../../../src/lib/route'
+import { formatRoute, hashOf, parseRoute, safeDecode, type Route } from '../../../src/lib/route'
 
 describe('safeDecode', () => {
   it('decodes valid escapes', () => {
@@ -13,97 +13,78 @@ describe('safeDecode', () => {
 
 describe('hashOf', () => {
   it('extracts the serialized fragment from a href', () => {
-    expect(hashOf('http://x.test/wiki/#/main/a%20b.md')).toBe('#/main/a%20b.md')
+    expect(hashOf('http://x.test/#r=o/r&f=a.md')).toBe('#r=o/r&f=a.md')
   })
 
   it('returns empty without a fragment', () => {
-    expect(hashOf('http://x.test/wiki/')).toBe('')
+    expect(hashOf('http://x.test/')).toBe('')
   })
 })
 
 describe('formatRoute', () => {
-  it('formats ref and path', () => {
-    expect(formatRoute({ ref: 'main', path: 'welcome/welcome.spec.md' })).toBe(
-      '#/main/welcome/welcome.spec.md'
-    )
+  it('returns an empty string without a repo (the landing form)', () => {
+    expect(formatRoute({ repo: undefined, path: '', page: '' })).toBe('')
   })
 
-  it('encodes slashes inside the ref', () => {
-    expect(formatRoute({ ref: 'feat/x', path: 'a.md' })).toBe('#/feat%2Fx/a.md')
+  it('emits only the repo when nothing else is set', () => {
+    expect(formatRoute({ repo: 'o/r', path: '', page: '' })).toBe('#r=o/r')
   })
 
-  it('appends the anchor', () => {
-    expect(formatRoute({ ref: 'main', path: 'a.md', anchor: 'sec' })).toBe('#/main/a.md#sec')
+  it('includes path, version, page and anchor when present', () => {
+    expect(
+      formatRoute({ repo: 'o/r', path: 'docs', ref: 'v1.0.0', page: 'guide/intro.md', anchor: 'sec' })
+    ).toBe('#r=o/r&p=docs&v=v1.0.0&f=guide/intro.md&a=sec')
   })
 
-  it('formats the content root with an empty path', () => {
-    expect(formatRoute({ ref: 'v1.0.0', path: '' })).toBe('#/v1.0.0/')
+  it('keeps slashes literal but encodes other special characters', () => {
+    expect(
+      formatRoute({ repo: 'o/r', path: 'my docs', ref: 'feat/x', page: 'a b/c#d.md' })
+    ).toBe('#r=o/r&p=my%20docs&v=feat/x&f=a%20b/c%23d.md')
   })
 })
 
 describe('parseRoute', () => {
-  it('defaults when the hash is empty', () => {
-    expect(parseRoute('', 'main')).toEqual({ ref: 'main', path: '' })
+  it('reads the landing form from an empty hash', () => {
+    expect(parseRoute('')).toEqual({ repo: undefined, path: '', ref: undefined, page: '', anchor: undefined })
   })
 
-  it('defaults when the hash is not a route', () => {
-    expect(parseRoute('#anchor-only', 'main')).toEqual({ ref: 'main', path: '' })
-  })
-
-  it('parses ref and path', () => {
-    expect(parseRoute('#/main/guide/intro.md', 'main')).toEqual({
-      ref: 'main',
-      path: 'guide/intro.md',
-      anchor: undefined,
-    })
-  })
-
-  it('parses a ref with no path', () => {
-    expect(parseRoute('#/v1.0.0', 'main')).toEqual({ ref: 'v1.0.0', path: '' })
-  })
-
-  it('decodes slashes in the ref', () => {
-    expect(parseRoute('#/feat%2Fx/a.md#sec', 'main')).toEqual({
-      ref: 'feat/x',
-      path: 'a.md',
+  it('parses every field', () => {
+    expect(parseRoute('#r=o/r&p=docs&v=v1.0.0&f=guide/intro.md&a=sec')).toEqual({
+      repo: 'o/r',
+      path: 'docs',
+      ref: 'v1.0.0',
+      page: 'guide/intro.md',
       anchor: 'sec',
     })
   })
 
-  it('drops an empty anchor', () => {
-    expect(parseRoute('#/main/a.md#', 'main')).toEqual({
-      ref: 'main',
-      path: 'a.md',
-      anchor: undefined,
+  it('decodes encoded values', () => {
+    expect(parseRoute('#r=o/r&p=my%20docs&f=a%20b/c%23d.md')).toMatchObject({
+      path: 'my docs',
+      page: 'a b/c#d.md',
     })
   })
 
-  it('falls back to the default ref when the ref segment is empty', () => {
-    expect(parseRoute('#//a.md', 'main')).toEqual({ ref: 'main', path: 'a.md', anchor: undefined })
+  it('treats an empty repo value as the landing form', () => {
+    expect(parseRoute('#r=').repo).toBeUndefined()
   })
 
-  it('round-trips through formatRoute', () => {
-    const route = { ref: 'feature/deep/branch', path: 'x/y.md', anchor: 'z' }
-    expect(parseRoute(formatRoute(route), 'main')).toEqual(route)
+  it('tolerates malformed escapes and stray keys', () => {
+    expect(parseRoute('#r=o/r&f=a%2&x&junk=1')).toMatchObject({ repo: 'o/r', page: 'a%2' })
   })
 
-  it('encodes spaces, unicode and hashes in the path', () => {
-    expect(formatRoute({ ref: 'main', path: 'my page/caf é.md' })).toBe(
-      '#/main/my%20page/caf%20%C3%A9.md'
-    )
-    expect(formatRoute({ ref: 'main', path: 'a#b.md' })).toBe('#/main/a%23b.md')
+  it('ignores a repeated key, keeping the first', () => {
+    expect(parseRoute('#r=first/one&r=second/two').repo).toBe('first/one')
   })
 
-  it('round-trips awkward file names and anchors', () => {
-    const route = { ref: 'gh#123', path: 'my page/a#b café.md', anchor: 'configuración' }
-    expect(parseRoute(formatRoute(route), 'main')).toEqual(route)
-  })
-
-  it('tolerates malformed escapes without throwing', () => {
-    expect(parseRoute('#/feat%2/a%2.md', 'main')).toEqual({
-      ref: 'feat%2',
-      path: 'a%2.md',
-      anchor: undefined,
-    })
+  it('round-trips awkward values', () => {
+    const route: Route = {
+      repo: 'o/r',
+      path: 'a b',
+      ref: 'feat/x#1',
+      page: 'dir/pá ge.md',
+      anchor: 'configuración',
+    }
+    expect(parseRoute(formatRoute(route))).toEqual(route)
   })
 })

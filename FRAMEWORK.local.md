@@ -8,4 +8,4 @@ Add repository-specific rules below.
 
 ## Specifications Location
 
-Canonical behaviour specs live in `specs/` as page-focused files (`specs/*.spec.md`), with ADRs in `specs/decisions/`. There is no `specs/features/` split; this layout mirrors illo3d's (ADR-0002).
+Canonical behaviour specs live in `specs/` as page-focused files (`specs/*.spec.md`), with ADRs in `specs/decisions/`. There is no `specs/features/` split; this layout and the project's engineering standards are recorded in ADR-0002.

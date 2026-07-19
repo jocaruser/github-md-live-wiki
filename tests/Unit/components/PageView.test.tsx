@@ -53,9 +53,9 @@ describe('PageView', () => {
     scroll.mockRestore()
   })
 
-  it('leaves route links to the router', () => {
+  it('leaves route links (which carry query params) to the router', () => {
     const scroll = vi.spyOn(Element.prototype, 'scrollIntoView')
-    render(<PageView html='<a href="#/main/a.md">page</a>' lang="" />)
+    render(<PageView html='<a href="#r=o/r&f=a.md">page</a>' lang="" />)
     fireEvent.click(screen.getByRole('link', { name: 'page' }))
     expect(scroll).not.toHaveBeenCalled()
     scroll.mockRestore()

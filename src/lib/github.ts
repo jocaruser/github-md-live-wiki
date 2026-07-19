@@ -74,6 +74,14 @@ async function cached<T>(key: string, ttlMs: number, load: () => Promise<T>): Pr
   return value
 }
 
+/** The repository's default branch — the ref shown as "latest". */
+export function fetchDefaultBranch(repo: string): Promise<string> {
+  return cached(`sw:default:${repo}`, BRANCH_TTL_MS, async () => {
+    const info = await apiGet<{ default_branch: string }>(`${API}/repos/${repo}`)
+    return info.default_branch
+  })
+}
+
 export function listTags(repo: string): Promise<RefInfo[]> {
   return cached(`sw:tags:${repo}`, BRANCH_TTL_MS, async () => {
     const tags = await apiGet<{ name: string; commit: { sha: string } }[]>(
@@ -113,19 +121,31 @@ export function encodeUrlPath(path: string): string {
  * commit sha), as paths relative to contentPath. Immutable refs cache for the
  * whole session; branch refs refresh every few minutes.
  */
+/** Joins non-empty URL path segments, so an empty content path means the root. */
+function joinUrlSegments(...parts: string[]): string {
+  return parts.filter(Boolean).join('/')
+}
+
+/**
+ * Lists the .md pages under contentPath at the given ref (tag, branch or
+ * commit sha), as paths relative to contentPath. An empty contentPath means
+ * the whole repository. Immutable refs cache for the whole session; branch
+ * refs refresh every few minutes.
+ */
 export function fetchSpecPaths(repo: string, ref: string, contentPath: string): Promise<string[]> {
   const ttl = looksLikeSha(ref) ? 0 : BRANCH_TTL_MS
   return cached(`sw:tree:${repo}:${contentPath}:${ref}`, ttl, async () => {
     const tree = await apiGet<{ tree: TreeEntry[] }>(
       `${API}/repos/${repo}/git/trees/${encodeURIComponent(ref)}?recursive=1`
     )
-    const prefix = `${contentPath}/`
+    const prefix = contentPath ? `${contentPath}/` : ''
     const paths = tree.tree
       .filter((e) => e.type === 'blob' && e.path.startsWith(prefix) && e.path.endsWith('.md'))
       .map((e) => e.path.slice(prefix.length))
       .sort()
     if (paths.length === 0) {
-      throw new WikiError('empty', `No .md files under ${contentPath}/ at ${ref}`)
+      const where = contentPath ? `under ${contentPath}/` : 'in the repository'
+      throw new WikiError('empty', `No .md files ${where} at ${ref}`)
     }
     return paths
   })
@@ -138,7 +158,7 @@ export async function fetchFile(
   path: string
 ): Promise<string> {
   let res: Response
-  const url = `${RAW}/${repo}/${encodeRefForUrl(ref)}/${encodeUrlPath(contentPath)}/${encodeUrlPath(path)}`
+  const url = `${RAW}/${repo}/${encodeRefForUrl(ref)}/${joinUrlSegments(encodeUrlPath(contentPath), encodeUrlPath(path))}`
   try {
     res = await fetch(url)
   } catch {
@@ -146,22 +166,5 @@ export async function fetchFile(
   }
   if (res.status === 404) throw new WikiError('not-found', `Not found at ${ref}: ${path}`)
   if (!res.ok) throw new WikiError('network', `GitHub responded ${res.status} for ${path}`)
-  return res.text()
-}
-
-// --- Local mode: the container serves a mounted content directory. ---
-
-export async function fetchLocalPaths(): Promise<string[]> {
-  const res = await fetch('./__local/manifest')
-  if (!res.ok) throw new WikiError('network', 'Local content manifest unavailable')
-  const manifest = (await res.json()) as { paths: string[] }
-  if (manifest.paths.length === 0) throw new WikiError('empty', 'No .md files in local content')
-  return [...manifest.paths].sort()
-}
-
-export async function fetchLocalFile(path: string): Promise<string> {
-  const res = await fetch(`./__local/file/${encodeUrlPath(path)}`)
-  if (res.status === 404) throw new WikiError('not-found', `Not found locally: ${path}`)
-  if (!res.ok) throw new WikiError('network', `Local server responded ${res.status} for ${path}`)
   return res.text()
 }

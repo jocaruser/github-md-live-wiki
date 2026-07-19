@@ -48,7 +48,9 @@ export function PageView({ html, sourceUrl, lang }: PageViewProps) {
     if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return
     const link = (event.target as HTMLElement).closest('a')
     const href = link?.getAttribute('href') ?? ''
-    if (href.startsWith('#') && !href.startsWith('#/')) {
+    // A bare fragment (no query params) is an in-page anchor; a route link is
+    // "#r=…". Scroll for the former, let the router handle the latter.
+    if (href.startsWith('#') && !href.includes('=')) {
       event.preventDefault()
       document.getElementById(safeDecode(href.slice(1)))?.scrollIntoView({ behavior: 'smooth' })
     }

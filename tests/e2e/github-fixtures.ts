@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test'
 
-/** Repo id baked into the e2e bundle via VITE_CONTENT_REPO (see Makefile). */
 export const REPO = 'e2e-org/e2e-repo'
+export const PATH = 'specs'
 export const SHA = 'abcdef1234567890abcdef1234567890abcdef12'
 
 const CORS = { 'access-control-allow-origin': '*' }
@@ -36,6 +36,7 @@ export async function mockGitHub(page: Page): Promise<void> {
         contentType: 'application/json',
         body: JSON.stringify(body),
       })
+    if (path === `/repos/${REPO}`) return json({ default_branch: 'main' })
     if (path === `/repos/${REPO}/tags`) {
       return json([{ name: 'v1.0.0', commit: { sha: 'f'.repeat(40) } }])
     }
@@ -51,7 +52,7 @@ export async function mockGitHub(page: Page): Promise<void> {
       const files = CONTENT[ref]
       if (!files) return route.fulfill({ status: 404, headers: CORS, body: '{}' })
       return json({
-        tree: Object.keys(files).map((file) => ({ path: `specs/${file}`, type: 'blob' })),
+        tree: Object.keys(files).map((file) => ({ path: `${PATH}/${file}`, type: 'blob' })),
       })
     }
     return route.fulfill({ status: 404, headers: CORS, body: '{}' })
@@ -60,9 +61,9 @@ export async function mockGitHub(page: Page): Promise<void> {
   await page.route('https://raw.githubusercontent.com/**', (route) => {
     const path = new URL(route.request().url()).pathname
     const rest = decodeURIComponent(path.slice(`/${REPO}/`.length))
-    const marker = rest.indexOf('/specs/')
+    const marker = rest.indexOf(`/${PATH}/`)
     const ref = rest.slice(0, marker)
-    const file = rest.slice(marker + '/specs/'.length)
+    const file = rest.slice(marker + `/${PATH}/`.length)
     const body = CONTENT[ref]?.[file]
     if (body === undefined) {
       return route.fulfill({ status: 404, headers: CORS, body: 'not found' })

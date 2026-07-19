@@ -5,13 +5,13 @@ import { TopBar } from '../../../src/components/TopBar'
 
 function renderBar(overrides: Partial<Parameters<typeof TopBar>[0]> = {}) {
   const props = {
-    siteTitle: 'test specs',
-    homeHref: '#/main/',
-    appUrl: 'https://app.test',
-    repoUrl: 'https://github.com/o/r',
+    siteTitle: 'illo3d',
+    homeHref: '#r=jocaruser/illo3d',
+    repoUrl: 'https://github.com/jocaruser/illo3d',
     theme: 'light' as const,
     onToggleTheme: vi.fn(),
     onToggleSidebar: vi.fn(),
+    onClose: vi.fn(),
     ...overrides,
   }
   render(<TopBar {...props}>slot content</TopBar>)
@@ -21,29 +21,31 @@ function renderBar(overrides: Partial<Parameters<typeof TopBar>[0]> = {}) {
 describe('TopBar', () => {
   it('links the title home and renders the slot', () => {
     renderBar()
-    expect(screen.getByRole('link', { name: 'test specs' })).toHaveAttribute('href', '#/main/')
+    expect(screen.getByRole('link', { name: 'illo3d' })).toHaveAttribute(
+      'href',
+      '#r=jocaruser/illo3d'
+    )
     expect(screen.getByText('slot content')).toBeInTheDocument()
   })
 
-  it('links the app and the repository when configured', () => {
+  it('links the repository', () => {
     renderBar()
-    expect(screen.getByRole('link', { name: 'App ↗' })).toHaveAttribute('href', 'https://app.test')
     expect(screen.getByRole('link', { name: 'GitHub ↗' })).toHaveAttribute(
       'href',
-      'https://github.com/o/r'
+      'https://github.com/jocaruser/illo3d'
     )
-  })
-
-  it('omits the app and repository links otherwise', () => {
-    renderBar({ appUrl: '', repoUrl: undefined })
-    expect(screen.queryByRole('link', { name: 'App ↗' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'GitHub ↗' })).not.toBeInTheDocument()
   })
 
   it('toggles the sidebar', async () => {
     const props = renderBar()
     await userEvent.click(screen.getByRole('button', { name: 'Toggle navigation' }))
     expect(props.onToggleSidebar).toHaveBeenCalledOnce()
+  })
+
+  it('closes the wiki', async () => {
+    const props = renderBar()
+    await userEvent.click(screen.getByRole('button', { name: 'Close wiki' }))
+    expect(props.onClose).toHaveBeenCalledOnce()
   })
 
   it('shows the moon in light mode and toggles the theme', async () => {

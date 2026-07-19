@@ -1,43 +1,56 @@
-# github-md-live-wiki
+# Live Wiki
 
-github-md-live-wiki is a **content-agnostic wiki shell** for markdown that lives in a GitHub repository. It is a static single-page app (**React 18**, **TypeScript**, **Vite**, **Tailwind CSS**) that fetches the `.md` files **from GitHub at view time** — so content changes publish the moment they merge, with no wiki build or release — and a version selector lets the reader view the content at **any release tag, branch head, or commit id** (see [ADR-0001](specs/decisions/ADR-0001-runtime-content-from-github.md)).
+**Live Wiki** (`github-md-live-wiki`) is a **content-agnostic wiki** for the Markdown that lives
+in a GitHub repository. It is a static single-page app (**React 18**, **TypeScript**, **Vite**,
+**Tailwind CSS**) that fetches the `.md` files **from GitHub in your browser, at view time** — so
+a repository's changes appear the moment they are pushed, with no build or deploy anywhere — and a
+version selector renders the content at **any release tag, branch head, or commit id**
+(see [ADR-0001](specs/decisions/ADR-0001-runtime-content-from-github.md)).
 
-It ships as a single Docker image (`ghcr.io/jocaruser/github-md-live-wiki`) configured entirely by environment variables, with `serve` and `export` modes (see [ADR-0003](specs/decisions/ADR-0003-container-contract.md)), and this repository's own GitHub Pages hosts a live instance rendering [jocaruser/illo3d](https://github.com/jocaruser/illo3d)'s behaviour specs: **<https://jocaruser.github.io/github-md-live-wiki/>**.
+A hosted instance runs on this repository's own GitHub Pages:
+**<https://jocaruser.github.io/github-md-live-wiki/>**.
 
-Reading features: sidebar from the content tree, full-text search, dark mode, deep links, and **on-device automatic translation** of the shown page (Español, Français, Deutsch, Italiano, Português, 日本語) via the browser's built-in Translator API — no keys, no server; the selector appears only where the browser supports it. MIT licensed ([LICENSE](LICENSE)).
+## What it does
 
-## Using the image
+- **Open any repository** — the app opens to a form: enter `owner/name` and a path (e.g. `docs`
+  or `specs`, or leave it empty for the repository root), and read. Repositories you open are kept
+  in a **Recent** list; a **Close wiki** button returns to the form
+  ([ADR-0005](specs/decisions/ADR-0005-reader-chosen-repository.md)).
+- **Everything is in the URL** — repository, path, version and page all live in the address, so
+  any link is shareable and reproducible: `…/#r=owner/name&p=docs&v=v1.2.0&f=guide/intro.md`.
+- **Any version, live** — pick a release, a branch head, or paste a commit id; content is fetched
+  fresh from GitHub, never pre-built.
+- **Reading comforts** — sidebar from the content tree, full-text search, dark mode, GitHub-style
+  rendering (syntax highlighting, task lists, heading anchors), and links back to each file on
+  GitHub.
+- **On-device translation** — translate the shown page (Español, Français, Deutsch, Italiano,
+  Português, 日本語) via the browser's built-in Translator API; no keys, no server, code left
+  verbatim. The selector appears only where the browser supports it.
 
-| Variable | Meaning | Default |
-|----------|---------|---------|
-| `CONTENT_REPO` | GitHub `owner/name` to render | required unless `/content` is mounted |
-| `CONTENT_PATH` | directory inside that repo holding the pages | `specs` |
-| `SITE_TITLE` | title in the top bar and browser tab | `<repo> specs` |
-| `APP_URL` | optional "App ↗" link | none |
-| `DEFAULT_REF` | branch shown as **latest** | `main` |
-| `PORT` | port for `serve` mode | `5176` |
+MIT licensed ([LICENSE](LICENSE)).
 
-**Serve** (local reading, plus local mode when `/content` is mounted — uncommitted edits show on refresh):
+## Self-hosting
+
+The app is entirely client-side, so any static host works. The published Docker image
+(`ghcr.io/jocaruser/github-md-live-wiki`) carries the bundle and a tiny static server — no
+configuration, since the reader chooses the repository at runtime
+([ADR-0003](specs/decisions/ADR-0003-container-contract.md)):
 
 ```bash
-docker run --rm -p 5176:5176 -e CONTENT_REPO=jocaruser/illo3d ghcr.io/jocaruser/github-md-live-wiki:v1
-# with local content:
-docker run --rm -p 5176:5176 -e CONTENT_REPO=jocaruser/illo3d \
-  -v "$PWD/specs:/content:ro" ghcr.io/jocaruser/github-md-live-wiki:v1
+# serve on http://localhost:5176
+docker run --rm -p 5176:5176 ghcr.io/jocaruser/github-md-live-wiki:v1
+
+# or export the static files to embed elsewhere (e.g. another Pages artifact)
+docker run --rm -v "$PWD/out:/out" ghcr.io/jocaruser/github-md-live-wiki:v1 export
 ```
 
-**Export** (in a consumer's Pages workflow — the bundle is path-agnostic, so it works under any subpath; the container runs as uid 1000, so `/out` must be writable by it, or pass `--user`):
-
-```bash
-docker run --rm -e CONTENT_REPO=jocaruser/illo3d -e APP_URL=https://jocaruser.github.io/illo3d/ \
-  -v "$PWD/dist/specs:/out" ghcr.io/jocaruser/github-md-live-wiki:v1 export
-```
-
-Consumers should pin the **major tag** (`:v1`): bugfix releases flow automatically, breaking changes require a deliberate bump.
+Pin the **major tag** (`:v1`): bugfix releases flow automatically, breaking changes need a
+deliberate bump. `PORT` (default `5176`) is the only knob.
 
 ## Development
 
-Prerequisites: **Docker**, **Docker Compose**, **GNU Make**. First run: `make init`, then `make dev` and open <http://localhost:5176>.
+Prerequisites: **Docker**, **Docker Compose**, **GNU Make**. First run: `make init`, then
+`make dev` and open <http://localhost:5176>.
 
 | Target | Purpose |
 |--------|---------|
@@ -57,8 +70,13 @@ Prerequisites: **Docker**, **Docker Compose**, **GNU Make**. First run: `make in
 
 ## Releasing
 
-Releases ship the **engine only** — content repositories never need one. Bump `version` in `package.json` (every PR bumps it per [AGENTS.md](AGENTS.md)), add `changelog/v<version>.md`, merge, then run the manual **Release** workflow: it builds the image, pushes `vX.Y.Z` + `vX` + `latest` to GHCR, and creates the GitHub release.
+Bump `version` in `package.json` (every PR bumps it per [AGENTS.md](AGENTS.md)), add
+`changelog/v<version>.md`, merge, then run the manual **Release** workflow: it builds the image,
+pushes `vX.Y.Z` + `vX` + `latest` to GHCR, and creates the GitHub release.
 
 ## Specs
 
-The behaviour record lives in [`specs/`](specs/README.md); decisions in [`specs/decisions/`](specs/decisions/README.md). This repository follows the Aircury engineering framework (`FRAMEWORK.md`) and mirrors illo3d's standards ([ADR-0002](specs/decisions/ADR-0002-mirror-illo3d-standards.md)).
+The behaviour record lives in [`specs/`](specs/README.md); decisions in
+[`specs/decisions/`](specs/decisions/README.md). Engineering standards are the project's own
+([ADR-0002](specs/decisions/ADR-0002-engineering-standards.md)), atop the Aircury framework
+(`FRAMEWORK.md`).

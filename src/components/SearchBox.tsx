@@ -25,8 +25,8 @@ export function SearchBox({ search, onNavigate }: SearchBoxProps) {
           if (event.key === 'Enter' && hits.length > 0) go(hits[0].path)
           if (event.key === 'Escape') setQuery('')
         }}
-        placeholder="Search specs…"
-        aria-label="Search specs"
+        placeholder="Search pages…"
+        aria-label="Search pages"
         className="w-36 rounded-md border border-slate-300 px-2 py-1 text-sm placeholder:text-slate-400 focus:w-56 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 sm:w-44 transition-all"
       />
       {query && (

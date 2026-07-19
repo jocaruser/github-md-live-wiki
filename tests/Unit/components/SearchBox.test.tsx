@@ -14,7 +14,7 @@ function renderBox(results: SearchHit[] = hits, onNavigate = vi.fn()) {
   return onNavigate
 }
 
-const box = () => screen.getByRole('searchbox', { name: 'Search specs' })
+const box = () => screen.getByRole('searchbox', { name: 'Search pages' })
 
 describe('SearchBox', () => {
   it('shows results while typing and navigates on click', async () => {

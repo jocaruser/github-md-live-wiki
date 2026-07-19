@@ -1,8 +1,8 @@
 name: Deploy to GitHub Pages
 
-# Hosts THIS repository's own wiki instance, configured for illo3d's specs.
-# Content never requires a deploy (the shell fetches it from GitHub at view
-# time); this workflow only redeploys the shell when the engine changes.
+# Hosts THIS repository's own Live Wiki instance. The app is form-driven and
+# fetches content from GitHub at view time, so this only redeploys the app when
+# the code changes — never for anyone's content.
 on:
   workflow_dispatch:
   push:
@@ -39,12 +39,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Build the shell for the hosted instance
+      - name: Build the app
         run: pnpm build
-        env:
-          VITE_CONTENT_REPO: jocaruser/illo3d
-          VITE_SITE_TITLE: illo3d specs
-          VITE_APP_URL: https://jocaruser.github.io/illo3d/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
